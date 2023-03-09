@@ -55,21 +55,35 @@ def create_maze(width, height):
     return grid
 
 # define the function to draw the maze
-def draw_maze(grid):
-    # calculate the size of the canvas
-    canvas_width = maze_width * cell_size + wall_width
-    canvas_height = maze_height * cell_size + wall_width
-    # set the canvas background color to white
-    pdf_canvas.setFillColorRGB(1, 1, 1)
-    pdf_canvas.rect(0, 0, canvas_width, canvas_height, stroke=0, fill=1)
-    # draw the walls
-    pdf_canvas.setFillColorRGB(0, 0, 0)
-    for x in range(maze_width):
-        for y in range(maze_height):
-            if not grid[x][y] & 1:
-                pdf_canvas.rect(x * cell_size, y * cell_size, cell_size, wall_width, stroke=0, fill=1)
-            if not grid[x][y] & 2:
-                pdf_canvas.rect(x * cell_size, y * cell_size, wall_width, cell_size, stroke=0, fill=1)
+def draw_maze(grid, cell_size, filename):
+    """
+    Draws the maze to a PDF file.
+    """
+    # initialize the PDF canvas
+    pdf_canvas = canvas.Canvas(filename)
+    pdf_canvas.setPageSize((len(grid[0]) * cell_size, len(grid) * cell_size))
+
+    # loop over the grid and draw the walls
+    for y, row in enumerate(grid):
+        for x, cell in enumerate(row):
+            # draw the walls
+            if cell & 1:
+                pdf_canvas.line(x * cell_size, y * cell_size, x * cell_size, (y + 1) * cell_size)
+            if cell & 2:
+                pdf_canvas.line(x * cell_size, y * cell_size, (x + 1) * cell_size, y * cell_size)
+            if cell & 4:
+                pdf_canvas.line(x * cell_size, (y + 1) * cell_size, (x + 1) * cell_size, (y + 1) * cell_size)
+            if cell & 8:
+                pdf_canvas.line((x + 1) * cell_size, y * cell_size, (x + 1) * cell_size, (y + 1) * cell_size)
+
+    # draw the start and end positions
+    pdf_canvas.setFont("Helvetica", cell_size * 0.4)
+    pdf_canvas.drawCentredString(cell_size / 2, cell_size / 2, "Start")
+    pdf_canvas.drawCentredString(len(grid[0]) * cell_size - cell_size / 2, len(grid) * cell_size - cell_size / 2, "End")
+
+    # save the PDF file
+    pdf_canvas.save()
+    
 
 # define the function to find the solution route
 def find_solution(grid, start, end, route):
@@ -89,9 +103,10 @@ def find_solution(grid, start, end, route):
             if (nx, ny) not in visited:
                 next_visited = visited.copy()
                 next_visited.add((nx, ny))
-                if len(route) < rows + cols - 2:
-                    route = "X" * (rows + cols - 2 - len(route)) + route
-                next_path = path + route[len(next_visited)-1]
+                if len(next_visited) < len(route):
+                    next_path = path + route[len(next_visited)-1]
+                else:
+                    next_path = path + "X"
                 stack.append(((nx, ny), next_path, next_visited))
     return []
 
@@ -102,9 +117,11 @@ def main():
     # create the maze
     grid = create_maze(maze_width, maze_height)
     # draw the maze
-    draw_maze(grid)
+    draw_maze(grid, cell_size, 'maze.pdf')
     # find the solution route
     solution = find_solution(grid, start, end, route)
+    print(grid)
+    print(solution)
     # highlight the solution route in green
     pdf_canvas.setStrokeColorRGB(0, 1, 0)
     pdf_canvas.setLineWidth(3)
@@ -113,7 +130,8 @@ def main():
         x2, y2 = solution[i+1]
         pdf_canvas.line(x1 * cell_size + cell_size / 2, y1 * cell_size + cell_size / 2, x2 * cell_size + cell_size / 2, y2 * cell_size + cell_size / 2)
     # save the PDF file
-    pdf_canvas.save()
+    #pdf_canvas.save()
+
 
 # call the main function
 if __name__ == "__main__":
